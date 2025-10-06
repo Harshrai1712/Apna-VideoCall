@@ -11,6 +11,8 @@ import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import server from '../environment';
 
 const server_url = server;
@@ -57,6 +59,18 @@ export default function VideoMeetComponent() {
     const videoRef = useRef([])
 
     let [videos, setVideos] = useState([])
+
+    const chatContainerRef = useRef(null);
+    const meetContainerRef = useRef(null);
+
+    let [isFullScreen, setIsFullScreen] = useState(false);
+
+    // Auto-scroll to latest message
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     // TODO
     // if(isChrome() === false) {
@@ -439,6 +453,34 @@ export default function VideoMeetComponent() {
         // this.setState({ message: "", sender: username })
     }
 
+    let toggleFullScreen = () => {
+        if (!isFullScreen) {
+            // Enter fullscreen
+            if (meetContainerRef.current.requestFullscreen) {
+                meetContainerRef.current.requestFullscreen();
+            } else if (meetContainerRef.current.webkitRequestFullscreen) {
+                meetContainerRef.current.webkitRequestFullscreen();
+            } else if (meetContainerRef.current.mozRequestFullScreen) {
+                meetContainerRef.current.mozRequestFullScreen();
+            } else if (meetContainerRef.current.msRequestFullscreen) {
+                meetContainerRef.current.msRequestFullscreen();
+            }
+            setIsFullScreen(true);
+        } else {
+            // Exit fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            setIsFullScreen(false);
+        }
+    }
+
     
     let connect = () => {
         setAskForUsername(false);
@@ -451,46 +493,107 @@ export default function VideoMeetComponent() {
 
             {askForUsername === true ?
 
-                <div>
+                <div className={styles.lobbyContainer}>
+                    <div className={styles.lobbyContent}>
+                        <h2 className={styles.lobbyTitle}>🎥 Enter into Lobby</h2>
+                        <TextField 
+                            id="outlined-basic" 
+                            label="Enter Your Name" 
+                            value={username} 
+                            onChange={e => setUsername(e.target.value)} 
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    connect();
+                                }
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            style={{ 
+                                marginBottom: '25px',
+                            }}
+                            InputProps={{
+                                style: {
+                                    borderRadius: '12px',
+                                    fontSize: '1.1rem'
+                                }
+                            }}
+                        />
+                        <Button 
+                            variant="contained" 
+                            onClick={connect}
+                            fullWidth
+                            size="large"
+                            style={{ 
+                                padding: '14px', 
+                                fontSize: '1.1rem',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '12px',
+                                fontWeight: 'bold',
+                                textTransform: 'uppercase',
+                                letterSpacing: '1.5px',
+                                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                                transition: 'all 0.3s ease'
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.transform = 'translateY(-3px)';
+                                e.currentTarget.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.6)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
+                            }}
+                        >
+                            Connect
+                        </Button>
 
-
-                    <h2>Enter into Lobby </h2>
-                    <TextField id="outlined-basic" label="Username" value={username} onChange={e => setUsername(e.target.value)} variant="outlined" />
-                    <Button variant="contained" onClick={connect}>Connect</Button>
-
-
-                    <div>
-                        <video ref={localVideoref} autoPlay muted></video>
+                        <div className={styles.lobbyVideoPreview}>
+                            <video ref={localVideoref} autoPlay muted></video>
+                        </div>
                     </div>
-
                 </div> :
 
 
-                <div className={styles.meetVideoContainer}>
+                <div className={styles.meetVideoContainer} ref={meetContainerRef}>
 
                     {showModal ? <div className={styles.chatRoom}>
 
                         <div className={styles.chatContainer}>
                             <h1>Chat</h1>
 
-                            <div className={styles.chattingDisplay}>
+                            <div className={styles.chattingDisplay} ref={chatContainerRef}>
 
                                 {messages.length !== 0 ? messages.map((item, index) => {
 
                                     console.log(messages)
                                     return (
-                                        <div style={{ marginBottom: "20px" }} key={index}>
-                                            <p style={{ fontWeight: "bold" }}>{item.sender}</p>
-                                            <p>{item.data}</p>
+                                        <div key={index}>
+                                            <p style={{ fontWeight: "bold", fontSize: "0.9rem", marginBottom: "5px" }}>{item.sender}</p>
+                                            <p style={{ fontSize: "1rem" }}>{item.data}</p>
                                         </div>
                                     )
-                                }) : <p>No Messages Yet</p>}
+                                }) : <p style={{ color: "rgba(255, 255, 255, 0.7)", textAlign: "center" }}>No Messages Yet</p>}
 
 
                             </div>
 
                             <div className={styles.chattingArea}>
-                                <TextField value={message} onChange={(e) => setMessage(e.target.value)} id="outlined-basic" label="Enter Your chat" variant="outlined" />
+                                <TextField 
+                                    value={message} 
+                                    onChange={(e) => setMessage(e.target.value)} 
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            sendMessage();
+                                        }
+                                    }}
+                                    id="outlined-basic" 
+                                    placeholder="Type your message..." 
+                                    variant="outlined"
+                                    InputLabelProps={{
+                                        shrink: true,
+                                    }}
+                                />
                                 <Button variant='contained' onClick={sendMessage}>Send</Button>
                             </div>
 
@@ -500,32 +603,55 @@ export default function VideoMeetComponent() {
 
 
                     <div className={styles.buttonContainers}>
-                        <IconButton onClick={handleVideo} style={{ color: "white" }}>
+                        <IconButton onClick={handleVideo}>
                             {(video === true) ? <VideocamIcon /> : <VideocamOffIcon />}
                         </IconButton>
-                        <IconButton onClick={handleEndCall} style={{ color: "red" }}>
-                            <CallEndIcon  />
+                        <IconButton 
+                            onClick={handleEndCall} 
+                            style={{ 
+                                background: '#EA4335',
+                                color: 'white',
+                                boxShadow: '0 4px 12px rgba(234, 67, 53, 0.4)',
+                                borderRadius: '28px',
+                                padding: '12px 24px',
+                                width: 'auto',
+                                minWidth: '80px',
+                            }}
+                            sx={{
+                                '&:hover': {
+                                    background: '#D93025',
+                                    boxShadow: '0 6px 16px rgba(234, 67, 53, 0.6)',
+                                    transform: 'scale(1.05)',
+                                }
+                            }}
+                        >
+                            <CallEndIcon style={{ color: 'white', fontSize: '26px' }} />
                         </IconButton>
-                        <IconButton onClick={handleAudio} style={{ color: "white" }}>
+                        <IconButton onClick={handleAudio}>
                             {audio === true ? <MicIcon /> : <MicOffIcon />}
                         </IconButton>
 
                         {screenAvailable === true ?
-                            <IconButton onClick={handleScreen} style={{ color: "white" }}>
+                            <IconButton onClick={handleScreen}>
                                 {screen === true ? <ScreenShareIcon /> : <StopScreenShareIcon />}
                             </IconButton> : <></>}
 
-                        <Badge badgeContent={newMessages} max={999} color='orange'>
-                            <IconButton onClick={() => setModal(!showModal)} style={{ color: "white" }}>
-                                <ChatIcon />                        </IconButton>
+                        <Badge badgeContent={newMessages} max={999} color='error'>
+                            <IconButton onClick={() => setModal(!showModal)}>
+                                <ChatIcon />
+                            </IconButton>
                         </Badge>
+
+                        <IconButton onClick={toggleFullScreen}>
+                            {isFullScreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                        </IconButton>
 
                     </div>
 
 
                     <video className={styles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
 
-                    <div className={styles.conferenceView}>
+                    <div className={showModal ? styles.conferenceViewWithChat : styles.conferenceView}>
                         {videos.map((video) => (
                             <div key={video.socketId}>
                                 <video
